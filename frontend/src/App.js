@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import axios from "axios";
 import { BrowserRouter, useNavigate, useSearchParams } from "react-router-dom";
 import { QRCodeCanvas } from "qrcode.react";
@@ -22,11 +22,11 @@ function Shell() {
   const [editing, setEditing] = useState(null), [qrOpen, setQrOpen] = useState(false), [detail, setDetail] = useState(null);
   const isPublic = window.location.pathname === "/consulta" || new URLSearchParams(window.location.search).has("consultar");
 
-  const load = async (custom = filters) => { const p = Object.fromEntries(Object.entries(custom).filter(([, v]) => v)); const { data } = await api.get("/appointments", { params: p }); setAppointments(data); };
-  useEffect(() => { api.get("/auth/me").then(r => setUser(r.data)).catch(() => {}).finally(() => setChecked(true)); load({ start: today }); }, []);
+  const load = useCallback(async (custom) => { const p = Object.fromEntries(Object.entries(custom).filter(([, v]) => v)); const { data } = await api.get("/appointments", { params: p }); setAppointments(data); }, []);
+  useEffect(() => { api.get("/auth/me").then(r => setUser(r.data)).catch(() => {}).finally(() => setChecked(true)); load({ start: today }); }, [load]);
   const stats = useMemo(() => ({ total: appointments.length, volumes: appointments.reduce((a, x) => a + Number(x.volume_count), 0), carriers: new Set(appointments.map(x => x.carrier_name)).size }), [appointments]);
   const doLogin = async (e) => { e.preventDefault(); try { const { data } = await api.post("/auth/login", login); setUser(data); setLoginOpen(false); setError(""); } catch (e) { setError(e.response?.data?.detail || "Não foi possível entrar."); } };
-  const save = async (data) => { try { if (editing?.id) await api.put(`/appointments/${editing.id}`, data); else await api.post("/appointments", data); setEditing(null); await load(); } catch { setError("Não foi possível salvar o agendamento."); } };
+  const save = async (data) => { try { if (editing?.id) await api.put(`/appointments/${editing.id}`, data); else await api.post("/appointments", data); setEditing(null); await load(filters); } catch { setError("Não foi possível salvar o agendamento."); } };
   const remove = async (id) => { if (window.confirm("Excluir este agendamento?")) { await api.delete(`/appointments/${id}`); load(); } };
   const qrValue = `${window.location.origin}/consulta?consultar=${today}`;
   if (!checked) return <div className="loading" data-testid="app-loading">Carregando DockSync...</div>;
