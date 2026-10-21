@@ -40,3 +40,10 @@ Aplicativo para agendar manualmente entregas de transportadoras e permitir que a
 1. Adicionar exportação para o fechamento diário da portaria.
 2. Adicionar filtro por status e doca.
 3. Criar histórico operacional por agendamento.
+## Update 2026-06 — Exportação Excel/PDF
+- Botões Excel (xlsx) e PDF (jsPDF + autotable) no painel admin e na consulta pública (/consulta)
+- Exporta os filtros aplicados, com linha TOTAL de volumes e nº de agendamentos (src/lib/exportSchedule.js)
+- Filtro "Hoje" agora limita a data de hoje (start=end=hoje); salvar/excluir recarrega com os filtros aplicados
+- Testado: iteration_2 (100% dos fluxos)
+## Backlog
+- P2: Cadastro de transportadoras/fornecedores; separar App.js em componentes

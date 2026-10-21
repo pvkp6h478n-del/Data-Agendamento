@@ -1,0 +1,34 @@
+{
+  "summary": "Frontend-only test of the Excel/PDF export feature on /consulta (public) and the admin panel, plus the delete regression. Every requested flow passed. I downloaded each file and parsed its contents (openpyxl/pypdf). Files have the title, the period/filter label, the 8-column header (Data, Horário, Transportadora, Fornecedor, Nota fiscal, Volumes, Doca, Status), exactly the rows shown in the table, and a TOTAL row equal to 'Volumes previstos' (56 for 3 rows, 5 with the carrier filter, 10 for admin). Filenames: docksync-agenda-<start>.xlsx/.pdf, and docksync-agenda-<start>_<end>.* for 'Próximos 7 dias'. Export uses the applied filters, not text typed but not yet applied. Both buttons are disabled when empty-state shows. Admin sees and uses both buttons. Deleting while the carrier filter is applied reloads with the filter kept.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [
+      {"component": "Filtro 'Hoje' + label do export", "issue": "The 'Hoje' filter sends only start=today. The backend applies $gte only, so 'Hoje' also lists future appointments (a 22/10 row appears on 21/10). The exported file is labeled '21/10/2026' but contains 22/10 rows, so the label is misleading.", "selector": "[data-testid=filter-today]", "priority": "MEDIUM"}
+    ],
+    "integration_issues": [
+      {"flow": "Delete/Save reload", "issue": "remove() and save() call load(filters), which is the input state, not 'applied'. If the user typed a filter without clicking Aplicar, that unapplied filter is silently applied after a delete or save. Suggest using load(applied).", "affected_selectors": ["[data-testid^=delete-appointment-]", "[data-testid=appointment-submit]"]}
+    ],
+    "design_issues": [
+      {"screen": "Export total row", "issues": ["Pluralization: '1 agendamentos' should be '1 agendamento'"]}
+    ]
+  },
+  "test_report_links": ["/app/tests/check_exports.py"],
+  "action_items": [
+    "Make 'Hoje' a single-day filter (set end=today in the filter-today handler), or make periodLabel show 'a partir de dd/mm' when only start is set",
+    "Use load(applied) instead of load(filters) in remove() and save()",
+    "Fix singular/plural in the export total ('1 agendamento')",
+    "Optional: remove leftover 'TEST UI Carrier' (UI-NF-1) appointment from iteration 1 still in DB"
+  ],
+  "critical_code_review_comments": [
+    "`today = new Date().toISOString().slice(0,10)` is UTC. For BRT users after 21:00 local, 'Hoje' and the filename date will be tomorrow. Build the date from local date parts instead.",
+    "The 'Próximos 7 dias' end date also uses toISOString (UTC), with the same caveat",
+    "load() has no try/catch, so API failures leave the table stale with no error message"
+  ],
+  "updated_files": ["/app/tests/check_exports.py"],
+  "success_rate": {"backend": "N/A (skipped)", "frontend": "100% of requested flows"},
+  "seed_data_creation": "Created 2 TEST_EXP appointments via admin UI; both deleted during test. Pre-existing 'TEST UI Carrier' record (from iteration 1) left untouched.",
+  "retest_needed": false,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "Downloads are saved with page.expect_download to /tmp/exports, then parsed with python /app/tests/check_exports.py (needs pip openpyxl pypdf). Credentials are in /app/memory/test_credentials.md. Accept the delete confirm with a dialog handler.",
+  "rca of the issue": "'Hoje' includes future days: App.js filter-today handler sets {start: today, end: ''}. server.py list_appointments then builds only {$gte: start}, so all future dates are returned. periodLabel(f) shows just br(f.start), so the export label claims a single day."
+}
